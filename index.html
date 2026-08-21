@@ -56,4 +56,239 @@
   $('#lessonQuizBtn').addEventListener('click',()=>{showPage('practice');quizIndex=0;quizScore=0;renderQuiz()});
   $('#lessonCompleteBtn').addEventListener('click',()=>{if(!state.lessonIds.includes(selectedLesson)){state.lessonIds.push(selectedLesson);state.lessons=state.lessonIds.length;state.xp+=20;save();renderLessons();updateProgress();toast('Lesson completed! +20 XP 🦊')}else toast('Already completed ✓')});
   function save(){storage.set('mv_lesson_ids',JSON.stringify(state.lessonIds));storage.set('mv_lessons',state.lessons);storage.set('mv_xp',state.xp)}
-  function updateProgress(){$('
+  function updateProgress(){$('.progressText.textContent = `${state.lessons}/${lessons.length} lessons completed`;
+    $('#xp').textContent = state.xp;
+    $('#lessonCount').textContent = state.lessons;
+  }
+
+  function save(){
+    try{
+      localStorage.setItem('mv_lessons',String(state.lessons));
+      localStorage.setItem('mv_xp',String(state.xp));
+    }catch(e){}
+  }
+
+  function openLesson(id){
+    const lesson=lessons.find(x=>x.id===id);
+    if(!lesson)return;
+
+    $('#lessonTitle').textContent=lesson.title;
+    $('#lessonBody').innerHTML=lesson.body;
+    $('#lessonPage').dataset.lessonId=id;
+    showPage('lesson');
+
+    $('#completeLesson').onclick=()=>{
+      if(!state.completed.includes(id)){
+        state.completed.push(id);
+        state.lessons=state.completed.length;
+        state.xp+=20;
+        save();
+        updateProgress();
+      }
+      showPage('learn');
+    };
+  }
+
+  $$('.nav').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const page=btn.dataset.page;
+      if(page)showPage(page);
+    });
+  });
+
+  $$('.bottomnav [data-page]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const page=btn.dataset.page;
+      if(page)showPage(page);
+    });
+  });
+
+  $('#startBtn').addEventListener('click',()=>showPage('learn'));
+  $('#learnBtn').addEventListener('click',()=>showPage('learn'));
+  $('#practiceBtn').addEventListener('click',()=>showPage('practice'));
+  $('#chatBtn').addEventListener('click',()=>showPage('chat'));
+  $('#homeBtn').addEventListener('click',()=>showPage('home'));
+
+  $$('.lessonCard').forEach(card=>{
+    card.addEventListener('click',()=>{
+      const id=card.dataset.lesson;
+      if(id)openLesson(id);
+    });
+  });
+
+  $('#backFromLesson').addEventListener('click',()=>showPage('learn'));
+
+  updateProgress();
+
+  const qs=[
+    {q:'What is the most natural answer to “What are you up to this weekend?”',
+      a:['I’m going to watch a movie with my friends.','Yes, I am weekend.','I weekend watch movie.'],c:0},
+
+    {q:'Choose the natural sentence.',
+      a:['I’m hungry.','I have hungry.','I am hunger.'],c:0},
+
+    {q:'Choose the natural way to introduce yourself.',
+      a:['Nice to meet you.','Nice meet I you.','I nice to meeting you.'],c:0},
+
+    {q:'Choose the natural way to talk about a hobby.',
+      a:['I’m really into photography.','I really into photograph.','I am photography really.'],c:0}
+  ];
+
+  let quizIndex=0,quizScore=0,quizAnswered=false;
+
+  function renderQuiz(){
+    const item=qs[quizIndex];
+    quizAnswered=false;
+    $('#qNo').textContent=quizIndex+1;
+    $('#qText').textContent=item.q;
+    $('#feedback').textContent='';
+    $('#nextQ').style.display='none';
+
+    const box=$('#choices');
+    box.innerHTML='';
+
+    item.a.forEach((answer,i)=>{
+      const b=document.createElement('button');
+      b.type='button';
+      b.className='choice';
+      b.textContent=answer;
+      b.addEventListener('click',()=>answerQuiz(i));
+      box.appendChild(b);
+    });
+  }
+
+  function answerQuiz(i){
+    if(quizAnswered)return;
+    quizAnswered=true;
+
+    const item=qs[quizIndex];
+    const buttons=$$('#choices .choice');
+
+    buttons.forEach((b,n)=>{
+      b.disabled=true;
+
+      if(n===item.c)b.classList.add('correct');
+      if(n===i && i!==item.c)b.classList.add('wrong');
+    });
+
+    if(i===item.c){
+      quizScore++;
+      $('#feedback').textContent='Correct! 🎉';
+    }else{
+      $('#feedback').textContent='Not quite — the highlighted answer is the natural one.';
+    }
+
+    $('#nextQ').textContent=
+      quizIndex===qs.length-1 ? 'See result →' : 'Next question →';
+
+    $('#nextQ').style.display='inline-flex';
+  }
+
+  $('#nextQ').addEventListener('click',()=>{
+    if(!quizAnswered)return;
+
+    if(quizIndex<qs.length-1){
+      quizIndex++;
+      renderQuiz();
+      return;
+    }
+
+    state.xp+=quizScore*5;
+    save();
+    updateProgress();
+
+    $('#qText').textContent=`You scored ${quizScore}/${qs.length}!`;
+    $('#choices').innerHTML='';
+    $('#feedback').textContent=
+      `You earned ${quizScore*5} XP. Ready for another round?`;
+
+    $('#nextQ').textContent='Try again →';
+    $('#nextQ').style.display='inline-flex';
+
+    $('#nextQ').onclick=()=>{
+      quizIndex=0;
+      quizScore=0;
+      renderQuiz();
+    };
+  });
+
+  renderQuiz();
+
+  function addChat(text,type='u'){
+    const b=document.createElement('div');
+    b.className='bubble '+type;
+    b.textContent=text;
+    $('#chatLog').appendChild(b);
+    $('#chatLog').scrollTop=$('#chatLog').scrollHeight;
+  }
+
+  function mikoReply(text){
+    const t=text.toLowerCase();
+
+    if(t.includes('practice')||t.includes('speaking'))
+      return 'Absolutely! Try saying: “I’m going to ___ this weekend.” Then make your own sentence. 🦊';
+
+    if(t.includes('hello')||t.includes('hi'))
+      return 'Hi! 👋 Let’s practice English together. Tell me what you did today.';
+
+    if(t.includes('thank'))
+      return 'You’re welcome! A natural alternative is “No problem!”';
+
+    if(t.includes('english'))
+      return 'Great! We can practice useful English phrases, vocabulary, and conversation.';
+
+    if(t.includes('weekend'))
+      return 'You can say: “I’m going to watch a movie this weekend.” What are you going to do?';
+
+    return 'Nice! Try saying that idea in a short English sentence. I’ll help you make it sound more natural. 🦊';
+  }
+
+  function sendChat(){
+    const input=$('#chatInput');
+    const text=input.value.trim();
+
+    if(!text)return;
+
+    addChat(text,'u');
+    input.value='';
+
+    const typing=document.createElement('div');
+    typing.className='bubble m';
+    typing.textContent='Miko is typing…';
+    typing.id='typing';
+
+    $('#chatLog').appendChild(typing);
+    $('#chatLog').scrollTop=$('#chatLog').scrollHeight;
+
+    setTimeout(()=>{
+      $('#typing')?.remove();
+      addChat(mikoReply(text),'m');
+    },500);
+  }
+
+  $('#sendBtn').addEventListener('click',sendChat);
+
+  $('#chatInput').addEventListener('keydown',e=>{
+    if(e.key==='Enter')sendChat();
+  });
+
+  $$('.nav,.bottomnav [data-page]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      if(document.activeElement?.blur){
+        document.activeElement.blur();
+      }
+    });
+  });
+
+  window.MikoVerba={
+    showPage,
+    openLesson,
+    renderQuiz
+  };
+
+  document.documentElement.dataset.mikoverbaReady='true';
+
+})();
+</script>
+</body>
+</html>
