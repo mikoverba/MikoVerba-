@@ -1120,4 +1120,338 @@ button:focus-visible{
 
     </div>
 
-<div class="chat-w
+<div class="chat-w rap">
+      <div class="chat-top">
+        <div class="miko-dot">🦊</div>
+        <div><b>Miko</b><div style="color:var(--muted);font-size:13px">Language practice companion</div></div>
+      </div>
+      <div class="chat-log" id="chatLog">
+        <div class="bubble miko">Hi! I'm Miko 🦊 Ask me about English, or say “practice speaking”.</div>
+      </div>
+      <div class="chat-input">
+        <input id="chatInput" maxlength="240" placeholder="Type a message…" aria-label="Message Miko">
+        <button class="btn primary" id="sendBtn" type="button">Send</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROGRESS -->
+<section id="progress" class="page">
+  <div class="container section">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Progress</div>
+        <h2>Your learning snapshot.</h2>
+      </div>
+      <p>Your lesson progress is saved in this browser when storage is available.</p>
+    </div>
+    <div class="progress-grid">
+      <div class="metric"><strong id="xp">120</strong><span>XP earned</span></div>
+      <div class="metric"><strong id="doneCount">0</strong><span>Lessons completed</span></div>
+      <div class="metric"><strong>3</strong><span>Day streak</span></div>
+    </div>
+    <div class="card" style="margin-top:15px">
+      <h3>Speaking</h3>
+      <div class="skill"><span>Current level</span><b>45%</b></div>
+      <div class="bar"><i style="width:45%"></i></div>
+      <div class="challenge" style="margin-top:16px">
+        <b>Today's challenge:</b> Say three sentences about what you did this week.
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <b style="color:var(--text)">🦊 MikoVerba</b> — Learn. Practice. Speak.<br>
+    <span>Prototype experience built with HTML, CSS and JavaScript.</span>
+  </div>
+</footer>
+
+<nav class="mobile-nav" aria-label="Mobile navigation">
+  <button type="button" data-page="home">🏠<span>Home</span></button>
+  <button type="button" data-page="learn">📚<span>Learn</span></button>
+  <button type="button" data-page="practice">🧠<span>Practice</span></button>
+  <button type="button" data-page="chat">💬<span>Chat</span></button>
+  <button type="button" data-page="progress">📊<span>Progress</span></button>
+</nav>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => Array.from(document.querySelectorAll(s));
+  const pages = ['home','learn','practice','chat','progress'];
+
+  const storage = {
+    get(key, fallback='') {
+      try {
+        const value = window.localStorage.getItem(key);
+        return value === null ? fallback : value;
+      } catch (e) {
+        return fallback;
+      }
+    },
+    set(key, value) {
+      try {
+        window.localStorage.setItem(key, String(value));
+      } catch (e) {}
+    }
+  };
+
+  const state = {
+    xp: Number(storage.get('mv_xp','120')) || 120,
+    completed: []
+  };
+
+  try {
+    const saved = JSON.parse(storage.get('mv_lesson_ids','[]'));
+    state.completed = Array.isArray(saved) ? saved : [];
+  } catch (e) {
+    state.completed = [];
+  }
+
+  state.lessons = state.completed.length;
+
+  function toast(message) {
+    const el = $('#toast');
+    if (!el) return;
+    el.textContent = message;
+    el.classList.add('show');
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => el.classList.remove('show'), 1800);
+  }
+
+  function showPage(id) {
+    const target = pages.includes(id) ? id : 'home';
+    $$('.page').forEach(page => page.classList.toggle('active', page.id === target));
+    $$('.nav-btn,[data-page]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.page === target);
+    });
+    try { window.scrollTo({top:0, behavior:'smooth'}); }
+    catch (e) { try { window.scrollTo(0,0); } catch (_) {} }
+  }
+
+  function toggleMobile() {
+    const links = $('.nav-links');
+    if (!links) return;
+    links.classList.toggle('mobile-open');
+  }
+
+  window.showPage = showPage;
+  window.toggleMobile = toggleMobile;
+
+  $$('.nav-btn,[data-page]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.page) showPage(btn.dataset.page);
+      const links = $('.nav-links');
+      if (links) links.classList.remove('mobile-open');
+    });
+  });
+
+  const lessons = [
+    {title:'Everyday introductions', sub:'Greetings & self-introduction · 5 min', phrase:'Nice to meet you.', note:'Use this when you meet someone for the first time.'},
+    {title:'Weekend conversations', sub:'Plans, questions & replies · 7 min', phrase:'What are you up to this weekend?', note:'Use this to ask about someone’s plans.'},
+    {title:'Ordering food', sub:'Useful restaurant phrases · 6 min', phrase:'Could I get a coffee, please?', note:'A polite way to order something.'},
+    {title:'Talking about hobbies', sub:'Express preferences naturally · 6 min', phrase:'I’m really into photography.', note:'Use this to talk naturally about an interest.'}
+  ];
+
+  let selectedLesson = 0;
+
+  function save() {
+    storage.set('mv_lesson_ids', JSON.stringify(state.completed));
+    storage.set('mv_lessons', state.lessons);
+    storage.set('mv_xp', state.xp);
+  }
+
+  function updateProgress() {
+    if ($('#xp')) $('#xp').textContent = state.xp;
+    if ($('#doneCount')) $('#doneCount').textContent = state.lessons;
+  }
+
+  function renderLessons() {
+    const grid = $('.lesson-list');
+    if (!grid) return;
+    const cards = Array.from(grid.querySelectorAll('.lesson'));
+    cards.forEach((card, index) => {
+      const done = state.completed.includes(index);
+      card.classList.toggle('done', done);
+      const num = card.querySelector('.num');
+      if (num) num.textContent = done ? '✓' : String(index + 1);
+    });
+  }
+
+  function openLesson(index) {
+    selectedLesson = index;
+    const lesson = lessons[index];
+    if (!lesson) return;
+    const cards = $$('.lesson');
+    if (cards[index]) {
+      cards[index].classList.add('selected');
+      cards.forEach((card,i) => { if(i!==index) card.classList.remove('selected'); });
+    }
+    showPage('learn');
+    toast(`Lesson ${index + 1}: ${lesson.title}`);
+  }
+
+  function lessonDone(card) {
+    const cards = $$('.lesson');
+    const index = cards.indexOf(card);
+    if (index < 0) return;
+    selectedLesson = index;
+    if (!state.completed.includes(index)) {
+      state.completed.push(index);
+      state.lessons = state.completed.length;
+      state.xp += 20;
+      save();
+      renderLessons();
+      updateProgress();
+      toast('Lesson completed! +20 XP 🦊');
+    } else {
+      toast('Already completed ✓');
+    }
+  }
+
+  window.lessonDone = lessonDone;
+
+  const questions = [
+    {q:'What is the most natural answer to “What are you up to this weekend?”', a:['I’m going to watch a movie with my friends.','Yes, I am weekend.','I weekend watch movie.'], c:0},
+    {q:'Choose the natural sentence.', a:['I’m hungry.','I have hungry.','I am hunger.'], c:0},
+    {q:'Choose the natural way to introduce yourself.', a:['Nice to meet you.','Nice meet I you.','I nice to meeting you.'], c:0},
+    {q:'Choose the natural way to talk about a hobby.', a:['I’m really into photography.','I really into photograph.','I am photography really.'], c:0}
+  ];
+
+  let quizIndex = 0;
+  let quizScore = 0;
+  let quizAnswered = false;
+
+  function renderQuiz() {
+    const item = questions[quizIndex];
+    if (!item) return;
+    quizAnswered = false;
+    $('#qnum').textContent = quizIndex + 1;
+    $('#question').textContent = item.q;
+    $('#feedback').textContent = '';
+    $('#nextBtn').style.display = 'none';
+    $('#nextBtn').textContent = quizIndex === questions.length - 1 ? 'See result →' : 'Next question →';
+
+    const box = $('#answers');
+    box.innerHTML = '';
+    item.a.forEach((answer,index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'answer';
+      button.textContent = answer;
+      button.addEventListener('click', () => answerQuestion(index));
+      box.appendChild(button);
+    });
+  }
+
+  function answerQuestion(index) {
+    if (quizAnswered) return;
+    quizAnswered = true;
+    const item = questions[quizIndex];
+    const buttons = $$('#answers .answer');
+    buttons.forEach((button,n) => {
+      button.disabled = true;
+      if (n === item.c) button.classList.add('correct');
+      if (n === index && index !== item.c) button.classList.add('wrong');
+    });
+    if (index === item.c) {
+      quizScore++;
+      $('#feedback').textContent = 'Correct! 🎉';
+    } else {
+      $('#feedback').textContent = 'Not quite — the highlighted answer is the natural one.';
+    }
+    $('#nextBtn').style.display = 'inline-flex';
+  }
+
+  function nextQuestion() {
+    if (!quizAnswered) return;
+    if (quizIndex < questions.length - 1) {
+      quizIndex++;
+      renderQuiz();
+      return;
+    }
+    state.xp += quizScore * 5;
+    save();
+    updateProgress();
+    $('#question').textContent = `You scored ${quizScore}/${questions.length}!`;
+    $('#answers').innerHTML = '';
+    $('#feedback').textContent = `You earned ${quizScore * 5} XP.`;
+    $('#nextBtn').textContent = 'Try again →';
+    $('#nextBtn').style.display = 'inline-flex';
+    quizAnswered = false;
+    $('#nextBtn').onclick = () => {
+      quizIndex = 0;
+      quizScore = 0;
+      renderQuiz();
+      $('#nextBtn').onclick = nextQuestion;
+    };
+  }
+
+  window.nextQuestion = nextQuestion;
+  $('#nextBtn').addEventListener('click', nextQuestion);
+
+  const replies = [
+    {keys:['hello','hi','hey'], text:'Hi! 👋 Tell me what you want to practice today.'},
+    {keys:['practice','speaking','speak'], text:'Great! Try: “I’m going to watch a movie this weekend.” Now make your own sentence.'},
+    {keys:['weekend'], text:'You can ask: “What are you up to this weekend?” A natural answer is: “I’m going to watch a movie with my friends.”'},
+    {keys:['english','learn'], text:'Start with one useful sentence, recall it without looking, then change it into your own sentence.'},
+    {keys:['thank'], text:'You’re welcome! 🦊 Keep practicing!'}
+  ];
+
+  function addChat(text, type='miko') {
+    const log = $('#chatLog');
+    const bubble = document.createElement('div');
+    bubble.className = `bubble ${type}`;
+    bubble.textContent = text;
+    log.appendChild(bubble);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function replyFor(text) {
+    const lower = text.toLowerCase();
+    const found = replies.find(r => r.keys.some(k => lower.includes(k)));
+    return found ? found.text : 'Nice! Try saying that idea in one short English sentence and I’ll help you make it sound natural. 🦊';
+  }
+
+  function sendChat() {
+    const input = $('#chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    addChat(text, 'user');
+    input.value = '';
+    const typing = document.createElement('div');
+    typing.className = 'bubble miko';
+    typing.id = 'typing';
+    typing.textContent = 'Miko is typing…';
+    $('#chatLog').appendChild(typing);
+    $('#chatLog').scrollTop = $('#chatLog').scrollHeight;
+    setTimeout(() => {
+      $('#typing')?.remove();
+      addChat(replyFor(text), 'miko');
+    }, 450);
+  }
+
+  $('#sendBtn').addEventListener('click', sendChat);
+  $('#chatInput').addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
+
+  $$('.actions .primary').forEach(button => {
+    if (button.textContent.includes('Start Learning')) button.addEventListener('click', () => showPage('learn'));
+  });
+
+  renderLessons();
+  updateProgress();
+  renderQuiz();
+  showPage('home');
+})();
+</script>
+</body>
+                                            </html>
