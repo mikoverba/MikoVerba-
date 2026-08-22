@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MikoVerba — Multilingual AI Companion</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fff7ed',
+              500: '#f97316',
+              600: '#ea580c',
+              700: '#c2410c',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-orange-500 selection:text-white">
+
+  <!-- ================= NAVBAR ================= -->
+  <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur border-b border-slate-800">
+    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-600 to-amber-500 flex items-center justify-center text-xl shadow-lg shadow-orange-500/20">
+          🦊
+        </div>
+        <div>
+          <h1 class="font-bold text-lg leading-tight tracking-tight text-white flex items-center gap-2">
+            MikoVerba
+            <span class="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20">AI Companion</span>
+          </h1>
+          <p class="text-xs text-slate-400">Multilingual Conversation & Language Learning</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button id="clearChatBtn" class="text-xs px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+          🧹 Clear Chat
+        </button>
+        <button id="exportChatBtn" class="text-xs px-3 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-medium transition shadow-sm">
+          📥 Export
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CHAT AREA ================= -->
+  <main class="flex-1 max-w-4xl w-full mx-auto p-4 flex flex-col">
+    <!-- Starters Carousel -->
+    <div class="mb-4">
+      <p class="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Quick Starters</p>
+      <div class="flex flex-wrap gap-2" id="startersContainer">
+        <button class="starter-chip text-xs bg-slate-900 border border-slate-800 hover:border-orange-500/50 hover:bg-slate-800 text-slate-300 px-3 py-1.5 rounded-full transition" data-prompt="Hi Miko! Let's roleplay ordering coffee and pastries at a local cafe in London.">
+          ☕ Cafe roleplay
+        </button>
+        <button class="starter-chip text-xs bg-slate-900 border border-slate-800 hover:border-orange-500/50 hover:bg-slate-800 text-slate-300 px-3 py-1.5 rounded-full transition" data-prompt="I want to practice Spanish. I'm a beginner. Please talk to me in Spanish and explain grammar in English or Hindi when helpful.">
+          🇪🇸 Spanish practice
+        </button>
+        <button class="starter-chip text-xs bg-slate-900 border border-slate-800 hover:border-orange-500/50 hover:bg-slate-800 text-slate-300 px-3 py-1.5 rounded-full transition" data-prompt="Hi Miko! Tum kaise ho? Aaj mera din kaisa raha discuss karte hain.">
+          🗣️ Hinglish / Hindi chat
+        </button>
+        <button class="starter-chip text-xs bg-slate-900 border border-slate-800 hover:border-orange-500/50 hover:bg-slate-800 text-slate-300 px-3 py-1.5 rounded-full transition" data-prompt="Hi Miko! Could you interview me for a job and give feedback on how natural my answers sound?">
+          💼 Job interview prep
+        </button>
+        <button class="starter-chip text-xs bg-slate-900 border border-slate-800 hover:border-orange-500/50 hover:bg-slate-800 text-slate-300 px-3 py-1.5 rounded-full transition" data-prompt="Hi Miko! Could you explain the difference between 'I had eaten' and 'I ate' with easy examples?">
+          📖 Grammar explanation
+        </button>
+        <button class="starter-chip text-xs bg-slate-900 border border-slate-800 hover:border-orange-500/50 hover:bg-slate-800 text-slate-300 px-3 py-1.5 rounded-full transition" data-prompt="Hi Miko! Tell me an interesting fact about language history or world culture today.">
+          🦊 Open conversation
+        </button>
+      </div>
+    </div>
+
+    <!-- Messages Container -->
+    <div id="messagesList" class="flex-1 bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 sm:p-6 overflow-y-auto space-y-4 min-h-[420px] max-h-[65vh] shadow-inner">
+      <!-- Dynamic messages injected by JS -->
+    </div>
+
+    <!-- Input Box -->
+    <div class="mt-4 bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-xl">
+      <form id="chatForm" class="flex flex-col sm:flex-row gap-2">
+        <textarea
+          id="userInput"
+          rows="2"
+          placeholder="Write in any language (English, Spanish, Hindi, Hinglish, French, etc.)... (Press Enter to send)"
+          class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 resize-none transition"
+        ></textarea>
+        <div class="flex items-center justify-between sm:justify-end gap-2">
+          <button
+            type="submit"
+            id="sendBtn"
+            class="w-full sm:w-auto px-6 py-2.5 bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-orange-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span>Send</span>
+            <span>➤</span>
+          </button>
+        </div>
+      </form>
+      <div class="flex items-center justify-between mt-2 px-1 text-[11px] text-slate-500">
+        <span>💡 Tip: Miko automatically adapts to the language you write in.</span>
+        <span>Shift + Enter for new line</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- ================= JAVASCRIPT LOGIC ================= -->
+  <script>
+    // State
+    const STORAGE_KEY = 'mikoverba_chat_history_v2';
+    let messages = [];
+
+    const messagesList = document.getElementById('messagesList');
+    const chatForm = document.getElementById('chatForm');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const clearChatBtn = document.getElementById('clearChatBtn');
+    const exportChatBtn = document.getElementById('exportChatBtn');
+    const startersContainer = document.getElementById('startersContainer');
+
+    // 1. Initial Welcome
+    const initialWelcome = {
+      role: 'assistant',
+      content: "Hi! I'm Miko, your multilingual conversation and language-learning companion. 🦊✨\n\nFeel free to talk with me in any language (English, Spanish, Hindi/Hinglish, French, Japanese, or any other!), practice everyday dialogues, learn grammar and vocabulary, or ask about any topic you're curious about. How can I help you today?",
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    // Load history or set default
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        messages = JSON.parse(saved);
+      } else {
+        messages = [initialWelcome];
+      }
+    } catch (e) {
+      messages = [initialWelcome];
+    }
+
+    function saveHistory() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+      } catch (e) {}
+    }
+
+    // 2. Speech Synthesis
+    function speakText(text) {
+      if (!window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+
+      const cleanText = text.replace(/[*_~`#💡🦊✨💬🌟]/g, '').trim();
+      if (!cleanText) return;
+
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.rate = 0.95;
+      utterance.pitch = 1.02;
+
+      // Detect language for voice matching
+      if (/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(cleanText)) utterance.lang = 'ja-JP';
+      else if (/[\u0900-\u097F]/.test(cleanText)) utterance.lang = 'hi-IN';
+      else if (/[¿¡áéíóúñÁÉÍÓÚÑ]/.test(cleanText) || /\b(hola|gracias|amigo)\b/i.test(cleanText)) utterance.lang = 'es-ES';
+      else if (/[çœàâèéêëîïôùûüÿ]/.test(cleanText) || /\b(bonjour|merci|salut)\b/i.test(cleanText)) utterance.lang = 'fr-FR';
+      else utterance.lang = 'en-US';
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    // 3. Render Messages
+    function renderMessages() {
+      messagesList.innerHTML = '';
+
+      messages.forEach((msg, idx) => {
+        const isUser = msg.role === 'user';
+        const wrapper = document.createElement('div');
+        wrapper.className = `flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`;
+
+        const bubble = document.createElement('div');
+        bubble.className = `max-w-[88%] sm:max-w-[78%] rounded-2xl p-4 text-sm leading-relaxed ${
+          isUser
+            ? 'bg-gradient-to-br from-orange-600 to-amber-600 text-white shadow-lg shadow-orange-600/10 rounded-br-sm'
+            : 'bg-slate-800/90 border border-slate-700/80 text-slate-100 rounded-bl-sm shadow-md'
+        }`;
+
+        // Header info
+        const header = document.createElement('div');
+        header.className = `flex items-center justify-between gap-4 mb-1 text-[11px] font-medium ${isUser ? 'text-orange-200' : 'text-slate-400'}`;
+        header.innerHTML = `
+          <span class="flex items-center gap-1">${isUser ? '👤 You' : '🦊 Miko'}</span>
+          <span>${msg.time || ''}</span>
+        `;
+        bubble.appendChild(header);
+
+        // Message text
+        const body = document.createElement('div');
+        body.className = 'whitespace-pre-wrap break-words';
+        body.textContent = msg.content;
+        bubble.appendChild(body);
+
+        // Audio play button for Miko
+        if (!isUser) {
+          const actionRow = document.createElement('div');
+          actionRow.className = 'mt-2 pt-2 border-t border-slate-700/50 flex items-center justify-between text-xs';
+
+          const audioBtn = document.createElement('button');
+          audioBtn.className = 'inline-flex items-center gap-1.5 text-xs text-orange-400 hover:text-orange-300 font-medium py-0.5 px-1.5 rounded hover:bg-slate-700/50 transition';
+          audioBtn.innerHTML = '🔊 Listen';
+          audioBtn.onclick = () => speakText(msg.content);
+
+          actionRow.appendChild(audioBtn);
+          bubble.appendChild(actionRow);
+        }
+
+        wrapper.appendChild(bubble);
+        messagesList.appendChild(wrapper);
+      });
+
+      // Scroll to bottom
+      messagesList.scrollTop = messagesList.scrollHeight;
+    }
+
+    // 4. Send Message to Backend API
+    async function sendMessage(text) {
+      if (!text.trim()) return;
+
+      const userMsg = {
+        role: 'user',
+        content: text.trim(),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+
+      messages.push(userMsg);
+      saveHistory();
+      renderMessages();
+
+      userInput.value = '';
+      userInput.disabled = true;
+      sendBtn.disabled = true;
+      sendBtn.innerHTML = '<span>Thinking...</span> <span>⏳</span>';
+
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: messages.map(m => ({ role: m.role, content: m.content })),
+            userLevel: 'Intermediate B1-B2',
+            activeTopic: 'General Conversation'
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Server returned ${response.status}`);
+        }
+
+        const data = await response.json();
+        const replyText = data.reply || "I couldn't process that response. Please try again!";
+
+        messages.push({
+          role: 'assistant',
+          content: replyText,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        });
+
+        saveHistory();
+        renderMessages();
+      } catch (err) {
+        messages.push({
+          role: 'assistant',
+          content: "🦊 I had a brief hiccup reaching the service. Please try sending your message again!",
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        });
+        renderMessages();
+      } finally {
+        userInput.disabled = false;
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<span>Send</span> <span>➤</span>';
+        userInput.focus();
+      }
+    }
+
+    // Event Handlers
+    chatForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      sendMessage(userInput.value);
+    });
+
+    userInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage(userInput.value);
+      }
+    });
+
+    startersContainer.addEventListener('click', (e) => {
+      const btn = e.target.closest('.starter-chip');
+      if (btn && btn.dataset.prompt) {
+        sendMessage(btn.dataset.prompt);
+      }
+    });
+
+    clearChatBtn.addEventListener('click', () => {
+      if (confirm('Clear chat history?')) {
+        messages = [initialWelcome];
+        saveHistory();
+        renderMessages();
+      }
+    });
+
+    exportChatBtn.addEventListener('click', () => {
+      const textLog = messages
+        .map(m => `[${m.time || ''}] ${m.role === 'user' ? 'You' : 'Miko'}:\n${m.content}\n`)
+        .join('\n---\n\n');
+
+      const blob = new Blob([textLog], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `mikoverba-chat-${new Date().toISOString().slice(0, 10)}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // Initial render
+    renderMessages();
+  </script>
+</body>
+</html>
